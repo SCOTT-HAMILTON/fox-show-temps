@@ -80,12 +80,14 @@ def list_files_in_bucket():
         print("Failed to list files.")
         return None
 
+
 def download_file_from_bucket(object_name, output_file_path):
     try:
         s3_client.download_file(bucket_name, object_name, output_file_path)
         print("File downloaded successfully.")
     except Exception as e:
         print("Failed to download the file:", e)
+
 
 def make_clean_dir(dir_path):
     try:
@@ -126,15 +128,19 @@ def download_seasons_historic():
         seasons_dict[f[:-5]] = read_hdf5_to_numpy(path, H5_DATASET_NAME)
     return seasons_dict
 
+
 def get_int_temp(data):
-    return int(data.hex()[-3:], 16)/10.0
-    
+    return int(data.hex()[-3:], 16) / 10.0
+
+
 def get_ext_temp(data):
-    return int(data.hex()[2:-3], 16)/10.0
+    return int(data.hex()[2:-3], 16) / 10.0
+
 
 def timestamp_to_local(timestamp):
     locale_tz = datetime.now().astimezone().tzinfo
     return datetime.fromtimestamp(timestamp, locale_tz)
+
 
 def add_breaking_lines(data_list, threshold):
     result = []
@@ -150,25 +156,41 @@ def add_breaking_lines(data_list, threshold):
         last_datetime = current_datetime
     return result
 
+
 seasons_historic = download_seasons_historic()
 allmsgs = np.array(
-        add_breaking_lines(
-            list(map(
-                lambda x: (timestamp_to_local(x[0]), get_int_temp(x[1]), get_ext_temp(x[1]), *x[1:]),
+    add_breaking_lines(
+        list(
+            map(
+                lambda x: (
+                    timestamp_to_local(x[0]),
+                    get_int_temp(x[1]),
+                    get_ext_temp(x[1]),
+                    *x[1:],
+                ),
                 np.concatenate(list(seasons_historic.values())).tolist(),
-            )), timedelta(minutes=25)
-        )
+            )
+        ),
+        timedelta(minutes=25),
     )
+)
 
-df = pd.DataFrame(allmsgs[:,0:3], columns = ['date','internal','external'])
+df = pd.DataFrame(allmsgs[:, 0:3], columns=["date", "internal", "external"])
 print(f"[LOG] historic:\n{df}")
 
 # Using graph_objects
 import plotly.graph_objects as go
-layout = go.Layout(title = "Températures lanloup", xaxis = {'title':'date'}, yaxis = {'title':'température (°C)'})
-fig = go.Figure(
-        [go.Scatter(x=df['date'], y=df['internal'], name="température intérieure"),
-         go.Scatter(x=df['date'], y=df['external'], name="température extérieure")],
-        layout = layout
+
+layout = go.Layout(
+    title="Températures lanloup",
+    xaxis={"title": "date"},
+    yaxis={"title": "température (°C)"},
 )
-fig.show() 
+fig = go.Figure(
+    [
+        go.Scatter(x=df["date"], y=df["internal"], name="température intérieure"),
+        go.Scatter(x=df["date"], y=df["external"], name="température extérieure"),
+    ],
+    layout=layout,
+)
+fig.show()
