@@ -150,7 +150,6 @@ def add_breaking_lines(data_list, threshold):
         if last_datetime is not None:
             time_diff = current_datetime - last_datetime
             if time_diff > threshold:
-                # Insert a breaking line tuple with None values
                 result.append(tuple(None for _ in item))
         result.append(item)
         last_datetime = current_datetime
@@ -160,16 +159,14 @@ def add_breaking_lines(data_list, threshold):
 seasons_historic = download_seasons_historic()
 allmsgs = np.array(
     add_breaking_lines(
-        list(
-            map(
-                lambda x: (
-                    timestamp_to_local(x[0]),
-                    get_int_temp(x[1]),
-                    get_ext_temp(x[1]),
-                    *x[1:],
-                ),
-                np.concatenate(list(seasons_historic.values())).tolist(),
-            )
+        map(
+            lambda x: (
+                timestamp_to_local(x[0]),
+                get_int_temp(x[1]),
+                get_ext_temp(x[1]),
+                *x[1:],
+            ),
+            np.concatenate(list(seasons_historic.values())).tolist(),
         ),
         timedelta(minutes=25),
     )
