@@ -141,7 +141,7 @@ def add_breaking_lines(data_list, threshold):
 
 
 parser = argparse.ArgumentParser(
-    description="A simple script with a CLI file argument."
+    description="Python script to display collected temperatures from sigfox sensors"
 )
 parser.add_argument("--h5", type=str, help="Path to the hdf5 file to read")
 args = parser.parse_args()
