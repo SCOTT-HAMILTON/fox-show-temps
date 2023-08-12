@@ -1,33 +1,17 @@
 from collections import defaultdict
-import pandas as pd
 from datetime import datetime, timezone, timedelta
 from pprint import pprint
+import argparse
 import boto3
 import h5py
 import json
 import numpy as np
 import os
+import pandas as pd
 import re
 import requests
 import shutil
 import time
-
-auth = json.load(open("auth.json", "r"))
-sigfox_login = auth["sigfox"]["login"]
-sigfox_pswd = auth["sigfox"]["password"]
-sigfox_devid = auth["sigfox"]["deviceId"]
-sigfox_endpoint = f"https://{sigfox_login}:{sigfox_pswd}@api.sigfox.com/v2"
-
-s3_endpoint = auth["s3"]["endpoint"]
-aws_access_key_id = auth["s3"]["accessKeyId"]
-aws_secret_access_key = auth["s3"]["secretAccessKey"]
-bucket_name = auth["s3"]["bucketName"]
-s3_client = boto3.client(
-    "s3",
-    endpoint_url=s3_endpoint,
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key,
-)
 
 H5_DATASET_NAME = "lanloup_temps"
 NP_DTYPE = [
@@ -70,7 +54,7 @@ def classify_messages_by_season_year(message_list):
     return dict(messages_by_season_year)
 
 
-def list_files_in_bucket():
+def list_files_in_bucket(s3_client):
     pattern = r"(Printemps|Été|Automne|Hiver)-\d{4}\.hdf5"
     response = s3_client.list_objects_v2(Bucket=bucket_name)
     if "Contents" in response:
@@ -81,7 +65,7 @@ def list_files_in_bucket():
         return None
 
 
-def download_file_from_bucket(object_name, output_file_path):
+def download_file_from_bucket(object_name, output_file_path, s3_client):
     try:
         s3_client.download_file(bucket_name, object_name, output_file_path)
         print("File downloaded successfully.")
@@ -100,13 +84,13 @@ def make_clean_dir(dir_path):
         pass
 
 
-def download_all_files():
+def download_all_files(s3_client):
     make_clean_dir("downloads")
-    files = list_files_in_bucket()
+    files = list_files_in_bucket(s3_client)
     print(f"[LOG] bucket files: {files}")
     for f in files:
         path = f"downloads/{f}"
-        download_file_from_bucket(f, path)
+        download_file_from_bucket(f, path, s3_client)
     return files
 
 
@@ -120,8 +104,8 @@ def read_hdf5_to_numpy(file_path, dataset_name):
         return None
 
 
-def download_seasons_historic():
-    downloaded_files = download_all_files()
+def download_seasons_historic(s3_client):
+    downloaded_files = download_all_files(s3_client)
     seasons_dict = dict()
     for f in downloaded_files:
         path = f"downloads/{f}"
@@ -156,7 +140,32 @@ def add_breaking_lines(data_list, threshold):
     return result
 
 
-seasons_historic = download_seasons_historic()
+parser = argparse.ArgumentParser(
+    description="A simple script with a CLI file argument."
+)
+parser.add_argument("--h5", type=str, help="Path to the hdf5 file to read")
+args = parser.parse_args()
+if args.h5:
+    file_path = args.h5
+    file_historic = {"_": read_hdf5_to_numpy(file_path, H5_DATASET_NAME)}
+else:
+    file_path = None
+    auth = json.load(open("auth.json", "r"))
+    s3_endpoint = auth["s3"]["endpoint"]
+    aws_access_key_id = auth["s3"]["accessKeyId"]
+    aws_secret_access_key = auth["s3"]["secretAccessKey"]
+    bucket_name = auth["s3"]["bucketName"]
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=s3_endpoint,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    )
+
+seasons_historic = (
+    download_seasons_historic(s3_client) if file_path is None else file_historic
+)
+
 allmsgs = np.array(
     add_breaking_lines(
         map(
