@@ -129,7 +129,7 @@ def timestamp_to_local(timestamp):
 def add_breaking_lines(data_list, threshold):
     result = []
     last_datetime = None
-    for item in data_list:
+    for item in sorted(data_list, key=lambda x:x[0]):
         current_datetime = item[0]
         if last_datetime is not None:
             time_diff = current_datetime - last_datetime
