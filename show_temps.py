@@ -64,13 +64,23 @@ def list_files_in_bucket(s3_client):
         print("Failed to list files.")
         return None
 
+def download_cid(cid, output_file_path):
+    url = f"{ipfs_endpoint}/{cid}"
+    with requests.get(url, stream=True) as r:
+        with open(output_file_path, 'wb') as f:
+            shutil.copyfileobj(r.raw, f)
 
 def download_file_from_bucket(object_name, output_file_path, s3_client):
     try:
-        s3_client.download_file(bucket_name, object_name, output_file_path)
-        print("File downloaded successfully.")
+        cid = s3_client.head_object(
+            Bucket=bucket_name,
+            Key=object_name,
+        ).get("Metadata").get("cid")
+        download_cid(cid, output_file_path)
+        print(f"File {bucket_name}/{object_name} downloaded successfully.")
     except Exception as e:
-        print("Failed to download the file:", e)
+        print(f"Failed to download the file {object_name}:", e)
+        raise e
 
 
 def make_clean_dir(dir_path):
@@ -155,6 +165,7 @@ else:
     aws_access_key_id = auth["s3"]["accessKeyId"]
     aws_secret_access_key = auth["s3"]["secretAccessKey"]
     bucket_name = auth["s3"]["bucketName"]
+    ipfs_endpoint = auth["s3"]["ipfsEndpoint"]
     s3_client = boto3.client(
         "s3",
         endpoint_url=s3_endpoint,

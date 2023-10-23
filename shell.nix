@@ -17,7 +17,7 @@ with pkgs; mkShell {
     customPython
   ];
   shellHook = ''
-    run(){
+    show_temps(){
       ${customPython}/bin/python3 show_temps.py
     }
   '';
