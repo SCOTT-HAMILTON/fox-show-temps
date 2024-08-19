@@ -130,6 +130,9 @@ def get_int_temp(data):
 def get_ext_temp(data):
     return int(data.hex()[2:-3], 16) / 10.0
 
+def get_batt_volt(data):
+    return int(data.hex()[:2], 16) * (3.3/256)*15/3.355
+
 
 def timestamp_to_local(timestamp):
     locale_tz = datetime.now().astimezone().tzinfo
@@ -182,6 +185,7 @@ allmsgs = np.array(
         map(
             lambda x: (
                 timestamp_to_local(x[0]),
+                get_batt_volt(x[1]),
                 get_int_temp(x[1]),
                 get_ext_temp(x[1]),
                 *x[1:],
@@ -192,7 +196,7 @@ allmsgs = np.array(
     )
 )
 
-df = pd.DataFrame(allmsgs[:, 0:3], columns=["date", "internal", "external"])
+df = pd.DataFrame(allmsgs[:, 0:4], columns=["date", "batt_volt", "internal", "external"])
 print(f"[LOG] historic:\n{df}")
 
 # Using graph_objects
@@ -202,11 +206,18 @@ layout = go.Layout(
     title="Températures lanloup",
     xaxis={"title": "date"},
     yaxis={"title": "température (°C)"},
+    yaxis2={
+        "title": "tension batterie (V)",  # Label for the second y-axis
+        "overlaying": "y",                # Overlay on the same x-axis
+        "side": "right",                  # Place y-axis on the right
+        "range": [-1, 28],                 # Define the range for the battery voltage
+    },
 )
 fig = go.Figure(
     [
         go.Scatter(x=df["date"], y=df["internal"], name="température intérieure"),
         go.Scatter(x=df["date"], y=df["external"], name="température extérieure"),
+        go.Scatter(x=df["date"], y=df["batt_volt"], name="tension batterie", yaxis="y2"),
     ],
     layout=layout,
 )

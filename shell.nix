@@ -15,6 +15,7 @@ in
 with pkgs; mkShell {
   buildInputs = [
     customPython
+    kdePackages.konqueror
   ];
   shellHook = ''
     show_temps(){
