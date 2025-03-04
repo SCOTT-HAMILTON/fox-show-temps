@@ -123,15 +123,26 @@ def download_seasons_historic(s3_client):
     return seasons_dict
 
 
-def get_int_temp(data):
-    return int(data.hex()[-3:], 16) / 10.0
+march_1_2025 = datetime(2025, 3, 1, tzinfo=timezone.utc) # data format switch date
+Tmax, Tmin = 60.0, -60.0
 
+def get_int_temp(data, timestamp):
+    if datetime.fromtimestamp(timestamp, tz=timezone.utc) < march_1_2025:
+        return int(data.hex()[-3:], 16) / 10.0
+    else:
+        return int(data.hex()[-3:], 16)*(Tmax-Tmin)/0xFFF+Tmin
 
-def get_ext_temp(data):
-    return int(data.hex()[2:-3], 16) / 10.0
+def get_ext_temp(data, timestamp):
+    if datetime.fromtimestamp(timestamp, tz=timezone.utc) < march_1_2025:
+        return int(data.hex()[2:-3], 16) / 10.0
+    else:
+        return int(data.hex()[2:-3], 16)*(Tmax-Tmin)/0xFFF+Tmin
 
-def get_batt_volt(data):
-    return int(data.hex()[:2], 16) * (3.3/256)*15/3.355
+def get_batt_volt(data, timestamp):
+    if datetime.fromtimestamp(timestamp, tz=timezone.utc) < march_1_2025:
+        return int(data.hex()[:2], 16) * (3.3/256)*15/3.355
+    else:
+        return int(data.hex()[:2], 16) * 15/0xFF
 
 
 def timestamp_to_local(timestamp):
@@ -185,9 +196,9 @@ allmsgs = np.array(
         map(
             lambda x: (
                 timestamp_to_local(x[0]),
-                get_batt_volt(x[1]),
-                get_int_temp(x[1]),
-                get_ext_temp(x[1]),
+                get_batt_volt(x[1], x[0]),
+                get_int_temp(x[1], x[0]),
+                get_ext_temp(x[1], x[0]),
                 *x[1:],
             ),
             np.concatenate(list(seasons_historic.values())).tolist(),
