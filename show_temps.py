@@ -232,4 +232,19 @@ fig = go.Figure(
     ],
     layout=layout,
 )
+# Update the layout with your axis specifications
+fig.update_layout(
+    xaxis=dict(
+        range=["2025-03-05", df["date"].iloc[-1]],  # Start at March 5, 2025, end at last date
+    ),
+    yaxis=dict(
+        range=[-5, 40],  # First y-axis range
+    ),
+    yaxis2=dict(
+        range=[7, 16],  # Second y-axis range
+        overlaying="y",
+        side="right",
+    )
+)
+fig.write_image("plot.svg")
 fig.show()
